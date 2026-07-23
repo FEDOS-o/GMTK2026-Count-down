@@ -20,6 +20,8 @@ config/icon="res://icon.svg"
 Dialogic="*uid://ds2q0uclmolvu"
 GameManager="*uid://b6jow0x0qpv3r"
 CrowdManager="*uid://cpusqki0d3yre"
+LevelManager="*uid://dxo0fq603gbpe"
+CharacterFactory="*uid://dapdy3xd8xe0s"
 
 [dialogic]
 

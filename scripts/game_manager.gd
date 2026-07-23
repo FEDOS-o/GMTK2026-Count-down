@@ -1,128 +1,130 @@
+# game_manager.gd
 extends Node
 
-# Сигналы
 signal quest_started(quest_data: Dictionary)
 signal quest_completed(quest_id: String)
 signal counter_updated(value: int)
+signal level_updated(level_data)
 
-# Переменные
-var current_quest_id: String = ""
-var current_quest_targets: int = 0
+var current_level: LevelData = null
 var found_count: int = 0
 var dialogic_available: bool = false
 
 func _ready():
-	# Проверяем, доступен ли Dialogic
+	# Проверяем Dialogic
 	if Engine.has_singleton("Dialogic"):
 		dialogic_available = true
 		if Dialogic.has_signal("signal_emitted"):
 			Dialogic.signal_emitted.connect(_on_dialog_signal)
-		if Dialogic.has_signal("timeline_started"):
-			Dialogic.timeline_started.connect(_on_timeline_started)
-		if Dialogic.has_signal("timeline_ended"):
-			Dialogic.timeline_ended.connect(_on_timeline_ended)
+	
+	# Подключаемся к менеджеру уровней
+	if LevelManager:
+		LevelManager.level_loaded.connect(_on_level_loaded)
+		
+		await get_tree().process_frame
+		
+		if LevelManager.get_level_count() > 0:
+			LevelManager.load_level_by_index(0)
+		else:
+			print("❌ Нет доступных уровней!")
 	else:
-		print("Dialogic не установлен или не включен")
-		dialogic_available = false
-	
-	await get_tree().process_frame
-	_test_quest()
+		print("❌ LevelManager не найден!")
 
-func _test_quest():
-	print("=== ТЕСТОВЫЙ КВЕСТ ===")
-	print("Заказчик: Ученый")
-	print("Задание: Найди 10 умных людей")
-	print("Подсказка: Ищи людей в очках или с книгами")
-	print("======================")
+# 🔥 Геттеры для UI
+func get_current_level() -> LevelData:
+	return current_level
+
+func get_found_count() -> int:
+	return found_count
+
+func get_target_count() -> int:
+	if current_level:
+		return current_level.target_count
+	return 0
+
+func _on_level_loaded(level: LevelData):
+	current_level = level
+	level_updated.emit(level)
 	
-	start_quest("quest_1", {
-		"title": "Умные люди",
-		"targets": 10,
-		"description": "Найди людей в очках или с книгами"
+	# Запускаем квест
+	start_quest(level.level_id, {
+		"title": level.level_name,
+		"targets": level.target_count,
+		"description": level.level_description,
+		"required_tags": level.required_tags
 	})
 
 func start_quest(quest_id: String, quest_data: Dictionary = {}):
-	current_quest_id = quest_id
-	current_quest_targets = quest_data.get("targets", 10)
 	found_count = 0
-	counter_updated.emit(current_quest_targets)
+	var targets = quest_data.get("targets", 10)
+	counter_updated.emit(targets)
 	
 	quest_data["quest_id"] = quest_id
 	quest_started.emit(quest_data)
 	
-	print("Квест начат:", quest_data.get("title", "Без названия"))
+	print("📋 Квест начат: ", quest_data.get("title", "Без названия"))
+	print("🎯 Нужно найти: ", targets, " персонажей")
 	
 	# Запускаем толпу
 	if CrowdManager:
 		CrowdManager.start_crowd()
-		print("🔥 CrowdManager.start_crowd() вызван!")
-	else:
-		print("❌ CrowdManager не найден!")
-	
-	if dialogic_available:
-		_start_dialogic_timeline(quest_id)
 
-func _start_dialogic_timeline(timeline_id: String):
-	print("Запуск диалога:", timeline_id)
-
-func _on_dialog_signal(signal_name: String, _args: Array):
-	match signal_name:
-		"quest_started":
-			print("Сигнал Dialogic: квест начался!")
-		"quest_completed":
-			print("Сигнал Dialogic: квест завершен!")
-			quest_completed.emit(current_quest_id)
-
-func _on_timeline_started():
-	print("Диалог начался")
-
-func _on_timeline_ended():
-	print("Диалог закончился")
-
-# 🔥 ГЛАВНЫЙ МЕТОД - принимает персонажа
-func capture_character(character, is_correct: bool = true, was_captured_by_player: bool = false):
-	if current_quest_targets == 0:
+func character_selected(character, is_valid: bool):
+	if not current_level or found_count >= current_level.target_count:
 		print("Все квесты выполнены!")
 		return
 	
-	# Проверяем через CrowdManager
-	if CrowdManager and CrowdManager.has_method("capture_character"):
-		CrowdManager.capture_character(character)
-	
-	# 🔥 Уменьшаем счетчик ТОЛЬКО если персонаж был захвачен игроком
-	if was_captured_by_player and is_correct:
+	if is_valid:
 		found_count += 1
-		var remaining = current_quest_targets - found_count
+		var remaining = current_level.target_count - found_count
 		counter_updated.emit(remaining)
 		
-		print("✅ Найден правильный персонаж! Осталось:", remaining)
+		print("✅ Правильный персонаж! Осталось:", remaining)
 		
-		if found_count >= current_quest_targets:
-			print("🎉 КВЕСТ ВЫПОЛНЕН!")
-			quest_completed.emit(current_quest_id)
-			
+		# Забираем персонажа
+		if CrowdManager and CrowdManager.has_method("capture_character"):
+			CrowdManager.capture_character(character)
+		
+		if found_count >= current_level.target_count:
+			print("🏆 УРОВЕНЬ ВЫПОЛНЕН!")
+			quest_completed.emit(current_level.level_id)
+			if LevelManager:
+				LevelManager.complete_level(current_level.level_id)
 			if CrowdManager:
 				CrowdManager.stop_crowd()
-			
-			if dialogic_available:
-				_emit_dialogic_signal("quest_completed")
-	elif is_correct:
-		# Персонаж правильный, но захвачен автоматически (без клика)
-		print("🔹 Персонаж достиг зоны и исчез (без клика)")
 	else:
 		print("❌ Неправильный персонаж!")
 		_show_wrong_selection()
+		
+		# Забираем неправильного персонажа
+		if CrowdManager and CrowdManager.has_method("capture_character"):
+			CrowdManager.capture_character(character)
 
 func _show_wrong_selection():
-	print("Показываем анимацию ошибки")
+	print("❌ Анимация ошибки")
 
-func _emit_dialogic_signal(signal_name: String):
-	print("Отправлен сигнал Dialogic:", signal_name)
+func _on_dialog_signal(signal_name: String, _args: Array):
+	match signal_name:
+		"quest_completed":
+			print("Диалог: квест завершен!")
 
-func set_quest_targets(count: int):
-	current_quest_targets = count
-	counter_updated.emit(count - found_count)
-
-func reset_counter():
-	found_count = 0
-	counter_updated.emit(current_quest_targets)
+# 🔥 Оставляем для совместимости с capture_character
+func capture_character(character, is_correct: bool = false, was_captured_by_player: bool = false):
+	if not current_level:
+		print("⚠️ Нет текущего уровня!")
+		return
+	
+	# Проверяем, красный ли персонаж
+	var is_red = false
+	if character.has_method("is_red_character"):
+		is_red = character.is_red_character()
+	elif character.has_tag("red"):
+		is_red = true
+	
+	if was_captured_by_player:
+		character_selected(character, is_red)
+	else:
+		# Автоматический захват (без клика игрока)
+		print("🔹 Персонаж исчез автоматически: ", character.name)
+		if CrowdManager and CrowdManager.has_method("capture_character"):
+			CrowdManager.capture_character(character)

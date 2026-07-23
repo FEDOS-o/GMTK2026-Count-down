@@ -131,6 +131,25 @@ func on_interact():
 	capture_agent_spawned = true
 	_spawn_capture_agent()
 	
+	# 🔥 Отмечаем, что персонаж был захвачен игроком
+	set_meta("captured_by_player", true)
+	
+	# 🔥 Проверяем, красный ли персонаж
+	var is_red = false
+	if has_method("is_red_character"):
+		is_red = is_red_character()
+	elif has_tag("red"):
+		is_red = true
+	
+	print("🟥 Персонаж красный? ", is_red)
+	
+	# 🔥 Вызываем GameManager с правильным флагом
+	var gm = get_tree().root.get_node("GameManager")
+	if gm and gm.has_method("character_selected"):
+		gm.character_selected(self, is_red)
+	else:
+		print("❌ GameManager не найден!")
+	
 # Функция захвата персонажа
 func capture():
 	if is_captured or is_being_captured:
@@ -176,7 +195,6 @@ func get_character_data() -> Dictionary:
 	}
 
 func _spawn_capture_agent():
-	var spawn_zone = _get_random_spawn_zone()
 	if not spawn_zone:
 		print("❌ Нет зон спавна!")
 		return
@@ -188,14 +206,17 @@ func _spawn_capture_agent():
 	print("📍 Спавн агента в: ", spawn_pos)
 	
 	var agent = CaptureAgent.new()
-	agent.global_position = spawn_pos
-	agent.set_target(self)
 	
 	var container = _get_level_container()
 	if container:
 		container.add_child(agent)
 	else:
 		get_tree().root.add_child(agent)
+	
+	agent.global_position = spawn_pos
+	agent.set_target(self)
+	
+	
 	
 	print("✅ Агент создан")
 
@@ -221,3 +242,14 @@ func _get_level_container() -> Node:
 	c = root.find_child("World", true, false)
 	if c: return c
 	return null
+
+
+# Добавьте эти методы в BaseCharacter
+
+# 🔥 Проверка, красный ли персонаж
+func is_red_character() -> bool:
+	return has_tag("red")
+
+# 🔥 Метод для проверки цвета (переопределяется в дочерних классах)
+func get_character_color() -> Color:
+	return Color.WHITE
