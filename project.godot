@@ -22,6 +22,8 @@ GameManager="*uid://b6jow0x0qpv3r"
 CrowdManager="*uid://cpusqki0d3yre"
 LevelManager="*uid://dxo0fq603gbpe"
 CharacterFactory="*uid://dapdy3xd8xe0s"
+<<<<<<<HEADLevelManager="*uid://dxo0fq603gbpe"
+SkyboxManager="*uid://b0vtsvug6h8py"
 
 [dialogic]
 
