@@ -109,41 +109,29 @@ func _physics_process(delta: float):
 		rotation.y = lerp_angle(rotation.y, target_rotation, 0.1)
 
 # Функция для взаимодействия (клик)
+var capture_agent_spawned: bool = false
+
 func on_interact():
+	print("🖱️ Клик по персонажу: ", name)
+	
 	if is_captured:
-		print("⚠️ Персонаж уже захвачен")
+		print("⚠️ Уже захвачен")
 		return
 	
 	if has_reached_target:
-		print("⚠️ Персонаж уже достиг цели и будет автоматически захвачен")
+		print("⚠️ Уже достиг цели")
 		return
 	
-	print("🖱️ Клик по персонажу: ", name)
+	if capture_agent_spawned:
+		print("⚠️ Агент уже вызван")
+		return
 	
-	# 🔥 Отмечаем, что персонаж был захвачен игроком
-	set_meta("captured_by_player", true)
+	# 🔥 НОВАЯ ЛОГИКА: останавливаемся и зовём агента
+	stop_walking()
+	is_walking = false
+	capture_agent_spawned = true
+	_spawn_capture_agent()
 	
-	# Проверяем, находится ли персонаж в зоне назначения
-	if target_zone:
-		# Пытаемся захватить через зону
-		var captured = target_zone.try_capture_character(self)
-		if captured:
-			print("✅ Персонаж захвачен через зону!")
-			return
-	
-	# Если персонаж не в зоне или зоны нет - просто проверяем через GameManager
-	var gm = get_tree().root.get_node("GameManager")
-	if gm and gm.has_method("capture_character"):
-		# Проверяем теги персонажа
-		var is_correct = false
-		if "wearing_glasses" in tags or "has_book" in tags:
-			is_correct = true
-		
-		print("🔍 Теги персонажа: ", tags, " подходит: ", is_correct)
-		gm.capture_character(self, is_correct, true)
-	else:
-		print("❌ GameManager не найден!")
-
 # Функция захвата персонажа
 func capture():
 	if is_captured:
@@ -178,3 +166,50 @@ func get_character_data() -> Dictionary:
 		"tags": tags,
 		"position": global_position
 	}
+
+func _spawn_capture_agent():
+	var spawn_zone = _get_random_spawn_zone()
+	if not spawn_zone:
+		print("❌ Нет зон спавна!")
+		return
+	
+	var spawn_pos = global_position
+	if spawn_zone.has_method("get_random_spawn_point"):
+		spawn_pos = spawn_zone.get_random_spawn_point()
+	
+	print("📍 Спавн агента в: ", spawn_pos)
+	
+	var agent = CaptureAgent.new()
+	agent.global_position = spawn_pos
+	agent.set_target(self)
+	
+	var container = _get_level_container()
+	if container:
+		container.add_child(agent)
+	else:
+		get_tree().root.add_child(agent)
+	
+	print("✅ Агент создан")
+
+func _get_random_spawn_zone():
+	var cm = get_node_or_null("/root/CrowdManager")
+	if cm and cm.has_method("get_random_spawn_zone"):
+		return cm.get_random_spawn_zone()
+	
+	var zones: Array = []
+	_find_zones_recursive(get_tree().root, zones)
+	return zones[randi() % zones.size()] if zones.size() > 0 else null
+
+func _find_zones_recursive(node: Node, zones: Array):
+	for child in node.get_children():
+		if child is SpawnZone:
+			zones.append(child)
+		_find_zones_recursive(child, zones)
+
+func _get_level_container() -> Node:
+	var root = get_tree().root
+	var c = root.find_child("LevelContainer", true, false)
+	if c: return c
+	c = root.find_child("World", true, false)
+	if c: return c
+	return null
