@@ -20,6 +20,7 @@ config/icon="res://icon.svg"
 Dialogic="*uid://ds2q0uclmolvu"
 GameManager="*uid://b6jow0x0qpv3r"
 CrowdManager="*uid://cpusqki0d3yre"
+SkyboxManager="*uid://b0vtsvug6h8py"
 
 [dialogic]
 
