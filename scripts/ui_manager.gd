@@ -37,7 +37,7 @@ func _update_counter(remaining: int):
 
 func _on_quest_started(quest_data: Dictionary):
 	var title = quest_data.get("title", "Квест")
-	var targets = quest_data.get("targets", 0)
+	var _targets = quest_data.get("targets", 0)
 	var description = quest_data.get("description", "")
 	quest_info.text = "📋 " + title + "\n" + description
 	print("UI: Квест начат -", title)
@@ -48,7 +48,7 @@ func _on_quest_completed(quest_id: String):
 	print("UI: Квест завершен -", quest_id)
 
 # Для отладки
-func _process(delta):
+func _process(_delta):
 	if debug_label:
 		var gm = get_tree().root.get_node("GameManager")
 		if gm:

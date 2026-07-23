@@ -168,6 +168,11 @@ func spawn_character(position: Vector3):
 	if not character:
 		return null
 	
+	if level_container:
+		level_container.add_child(character)
+	else:
+		add_child(character)
+	
 	character.global_position = position
 	
 	if randf() > 0.5:
@@ -175,10 +180,7 @@ func spawn_character(position: Vector3):
 	else:
 		character.direction = Vector3.BACK
 	
-	if level_container:
-		level_container.add_child(character)
-	else:
-		add_child(character)
+	
 	
 	all_characters.append(character)
 	character.character_destroyed.connect(_on_character_destroyed)

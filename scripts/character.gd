@@ -7,7 +7,7 @@ class_name BaseCharacter
 @export var min_walk_speed: float = 2.0
 @export var max_walk_speed: float = 4.0
 @export var direction: Vector3 = Vector3.FORWARD
-@export var target_position: Vector3 = Vector3.ZERO  # Целевая позиция для движения
+@export var target_position: Vector3 = Vector3.ZERO
 
 # Компоненты
 @onready var mesh_container: Node3D = $MeshContainer
@@ -19,7 +19,8 @@ var is_captured: bool = false
 var tags: Array[String] = []
 var is_moving_to_target: bool = false
 var target_zone: TargetZone = null
-var has_reached_target: bool = false  # 🔥 Новый флаг
+var has_reached_target: bool = false
+var is_being_captured: bool = false  # 🔥 Новый флаг для предотвращения повторного захвата
 
 # Сигналы
 signal character_destroyed(character: BaseCharacter)
@@ -43,6 +44,9 @@ func setup_character():
 	pass
 
 func start_walking():
+	if is_captured or is_being_captured:
+		return
+		
 	is_walking = true
 	if animation_player and animation_player.has_animation("walk"):
 		animation_player.play("walk")
@@ -62,26 +66,23 @@ func set_target(target_pos: Vector3):
 	print("Персонаж идет к цели: ", target_pos)
 
 func _physics_process(delta: float):
-	if not is_walking or is_captured or has_reached_target:
+	# 🔥 Если персонаж захвачен или в процессе захвата - не двигаемся
+	if is_captured or is_being_captured or not is_walking or has_reached_target:
 		return
 	
 	# Если есть цель - двигаемся к ней
 	if is_moving_to_target and target_position != Vector3.ZERO:
 		var distance = global_position.distance_to(target_position)
 		
-		# 🔥 Увеличиваем радиус обнаружения для надежности
 		if distance < 0.8:
 			# Достигли цели
 			has_reached_target = true
 			is_moving_to_target = false
 			stop_walking()
 			
-			# 🔥 Проверяем, не в зоне ли мы назначения
 			if target_zone:
 				print("✅ Персонаж достиг зоны назначения!")
 				target_zone.check_character_entered(self)
-			else:
-				print("⚠️ У персонажа нет target_zone!")
 			return
 		
 		# Двигаемся к цели
@@ -104,7 +105,7 @@ func _physics_process(delta: float):
 	move_and_slide()
 	
 	# Поворачиваем персонажа в направлении движения
-	if direction != Vector3.ZERO:
+	if direction != Vector3.ZERO and not is_captured:
 		var target_rotation = atan2(direction.x, direction.z)
 		rotation.y = lerp_angle(rotation.y, target_rotation, 0.1)
 
@@ -112,10 +113,8 @@ func _physics_process(delta: float):
 var capture_agent_spawned: bool = false
 
 func on_interact():
-	print("🖱️ Клик по персонажу: ", name)
-	
-	if is_captured:
-		print("⚠️ Уже захвачен")
+	if is_captured or is_being_captured:
+		print("⚠️ Персонаж уже захвачен или в процессе захвата")
 		return
 	
 	if has_reached_target:
@@ -134,20 +133,29 @@ func on_interact():
 	
 # Функция захвата персонажа
 func capture():
-	if is_captured:
+	if is_captured or is_being_captured:
 		return
 	
+	is_being_captured = true
 	is_captured = true
 	stop_walking()
 	
+	# 🔥 Останавливаем физику - обнуляем скорость
+	velocity = Vector3.ZERO
+	
+	# 🔥 ОТКЛЮЧАЕМ ФИЗИКУ - делаем персонажа статичным
+	set_physics_process(false)
+	
 	print("Персонаж захвачен: ", name)
 	
-	# Анимация исчезновения
+	# 🔥 Анимация исчезновения через SCALE
 	var tween = create_tween()
-	tween.tween_property(self, "scale", Vector3.ZERO, 0.5)
+	tween.tween_property(self, "scale", Vector3(1e-6, 1e-6, 1e-6), 0.5)
 	tween.tween_callback(_on_capture_complete)
 
 func _on_capture_complete():
+	# 🔥 Включаем физику обратно перед удалением (на всякий случай)
+	set_physics_process(true)
 	character_destroyed.emit(self)
 	queue_free()
 

@@ -65,7 +65,7 @@ func start_quest(quest_id: String, quest_data: Dictionary = {}):
 func _start_dialogic_timeline(timeline_id: String):
 	print("Запуск диалога:", timeline_id)
 
-func _on_dialog_signal(signal_name: String, args: Array):
+func _on_dialog_signal(signal_name: String, _args: Array):
 	match signal_name:
 		"quest_started":
 			print("Сигнал Dialogic: квест начался!")
