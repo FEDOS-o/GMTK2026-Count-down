@@ -55,12 +55,12 @@ func get_random_point() -> Vector3:
 func check_character_entered(character: BaseCharacter):
 	print("🔍 check_character_entered вызван для: ", character.name)
 	
-	if character in characters_in_zone:
-		print("⚠️ Персонаж уже в зоне")
+	if character.is_captured or character.is_being_captured:
+		print("⚠️ Персонаж уже захвачен, пропускаем")
 		return
 	
-	if character.is_captured:
-		print("⚠️ Персонаж уже захвачен")
+	if character in characters_in_zone:
+		print("⚠️ Персонаж уже в зоне")
 		return
 	
 	characters_in_zone.append(character)
@@ -76,6 +76,10 @@ func _on_body_entered(body: Node):
 	
 	if body is BaseCharacter:
 		var character = body as BaseCharacter
+		
+		if character.is_captured or character.is_being_captured:
+			return
+		
 		if character not in characters_in_zone and not character.is_captured:
 			characters_in_zone.append(character)
 			character_entered_zone.emit(character)
@@ -102,12 +106,12 @@ func is_valid_target(character: BaseCharacter) -> bool:
 	return false
 
 func try_capture_character(character: BaseCharacter) -> bool:
-	if character not in characters_in_zone:
-		print("⚠️ Персонаж не в зоне назначения!")
+	if character.is_captured or character.is_being_captured:
+		print("⚠️ Персонаж уже захвачен!")
 		return false
 	
-	if character.is_captured:
-		print("⚠️ Персонаж уже захвачен!")
+	if character not in characters_in_zone:
+		print("⚠️ Персонаж не в зоне назначения!")
 		return false
 	
 	if not is_valid_target(character):
@@ -118,6 +122,11 @@ func try_capture_character(character: BaseCharacter) -> bool:
 	return true
 
 func capture_character(character: BaseCharacter):
+	 #🔥 Проверяем, не захвачен ли уже персонаж
+	if character.is_captured or character.is_being_captured:
+		print("⚠️ Персонаж уже захвачен, пропускаем")
+		return
+	
 	if character in characters_in_zone:
 		characters_in_zone.erase(character)
 		character_captured.emit(character)
