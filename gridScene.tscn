@@ -1,0 +1,15 @@
+[gd_scene format=3 uid="uid://beolbo1rsukdi"]
+
+[sub_resource type="BoxMesh" id="BoxMesh_nkv08"]
+
+[sub_resource type="CylinderMesh" id="CylinderMesh_nkv08"]
+
+[node name="Node3D" type="Node3D" unique_id=1283565402]
+
+[node name="gridMap" type="Node3D" parent="." unique_id=2092698673]
+
+[node name="MeshInstance3D" type="MeshInstance3D" parent="gridMap" unique_id=587721224]
+mesh = SubResource("BoxMesh_nkv08")
+
+[node name="MeshInstance3D2" type="MeshInstance3D" parent="gridMap" unique_id=107840246]
+mesh = SubResource("CylinderMesh_nkv08")

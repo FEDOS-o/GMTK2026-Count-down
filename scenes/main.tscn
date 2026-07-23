@@ -4,6 +4,7 @@
 [ext_resource type="Script" uid="uid://qw0tq8a8k8o8" path="res://scripts/ui_manager.gd" id="1_o5qli"]
 [ext_resource type="Script" uid="uid://dg806yarlu7c0" path="res://scripts/zones/spawn_zone.gd" id="1_sugp2"]
 [ext_resource type="Script" uid="uid://bxx4mmgj64krq" path="res://scripts/zones/target_zone.gd" id="2_jyhfs"]
+[ext_resource type="MeshLibrary" uid="uid://elmqgbrvfvtf" path="res://assets/todelete.tres" id="5_tbgi4"]
 
 [sub_resource type="BoxShape3D" id="BoxShape3D_qsuaf"]
 size = Vector3(8.52, 1.925, 2.22)
@@ -70,3 +71,6 @@ mesh = SubResource("PlaneMesh_s1fef")
 
 [node name="CollisionShape3D" type="CollisionShape3D" parent="MeshInstance3D/StaticBody3D" unique_id=780992965]
 shape = SubResource("ConcavePolygonShape3D_0wfyh")
+
+[node name="GridMap" type="GridMap" parent="." unique_id=1522099097]
+mesh_library = ExtResource("5_tbgi4")

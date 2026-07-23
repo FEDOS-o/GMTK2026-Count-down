@@ -40,6 +40,10 @@ window/stretch/aspect="expand"
 
 enabled=PackedStringArray("res://addons/dialogic/plugin.cfg")
 
+[filesystem]
+
+import/blender/enabled=false
+
 [input]
 
 dialogic_default_action={
